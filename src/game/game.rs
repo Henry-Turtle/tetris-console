@@ -6,7 +6,7 @@ use crate::game::board;
 use crate::game::board::Point;
 use crate::game::piece;
 use crate::game::board::Tile;
-use super::piece::{Piece, PieceType, Gamepiece, PieceResult};
+use super::piece::{Piece, PieceType, Gamepiece, PieceResult, Held};
 
 pub struct Game {
     pub gl: GlGraphics, // OpenGL drawing backend.
@@ -133,6 +133,8 @@ impl Game {
             Button::Keyboard(Key::Z) =>
                 self.rotate_counterclockwise(),
 
+            Button::Keyboard(Key::C) =>
+                self.hold_piece(),
             _ => () 
         }
         
@@ -193,6 +195,25 @@ impl Game {
                 },
                 PieceResult::Failure => ()
             }
+        }
+
+        pub fn hold_piece(&mut self){
+            if ! self.grid.held.available {return}
+            match self.grid.held.held_type{
+                Some(PieceType) => {
+                    let current_held = self.grid.held.held_type.clone();
+                    self.grid.held = Held{held_type: Some(self.grid.piece.piece_type.clone()), available: true};
+                    self.grid.remove_all_alive_tiles();
+                    self.grid.generate_specific_piece(current_held);
+                }
+                None => {
+                    self.grid.held = Held{held_type: Some(self.grid.piece.piece_type.clone()), available: true};
+                    self.grid.remove_all_alive_tiles();
+                    self.grid.generate_new_piece();
+                }
+            }
+            self.grid.held.available = false;
+            
         }
         
     }

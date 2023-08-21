@@ -1,12 +1,10 @@
 use super::board::{Point, Tile, Board};
-use core::clone::Clone;
 pub struct Piece{
     //*Number of clockwise rotations. 0 is base, goes to 3 */
     pub rotation: usize,
     pub piece_type: PieceType
 }
 
-#[derive(Clone, Copy)]
 pub enum PieceType{
     OPiece,
     TPiece,
@@ -152,7 +150,33 @@ impl Gamepiece for Piece{
     fn get_wallkicks(&self, direction: RotationDirection)->[(i8, i8); 5] {
         match self.piece_type{
             PieceType::IPiece => {
-                return [(0,0), (0,0),(0,0),(0,0),(0,0)]
+                match self.rotation{
+                    0 => {
+                        match direction{
+                            RotationDirection::Clockwise => return [(0,0), (0, -2), (0, 1), (1, -2), (2, 1)],
+                            RotationDirection::Counterclockwise => return [(0,0), (0, -1), (0, 2), (2, 1), (1, 2)]
+                        }
+                    },
+                    1 => {
+                        match direction{
+                            RotationDirection::Clockwise => return [(0,0), (0, -1), (0, 2), (-2, -1), (1, 2)],
+                            RotationDirection::Counterclockwise => return [(0,0), (0, 2), (0, -2), (-1, 2), (2, -1)]
+                        }
+                    },
+                    2 => {
+                        match direction{
+                            RotationDirection::Clockwise => return [(0,0), (0, 2), (0, -1), (-1, 2), (2, -1)],
+                            RotationDirection::Counterclockwise => return [(0,0), (0, 1), (0, -2), (2, -1), (-1, -2)]
+                        }
+                    }
+                    3 => {
+                        match direction{
+                            RotationDirection::Clockwise => return [(0,0), (0, 1), (0, -2), (2, 1), (-1, -2)],
+                            RotationDirection::Counterclockwise => return [(0,0), (0, -2), (0, 1), (1, -2), (-2, 1)]
+                        }
+                    }
+                    _ => panic!("ROTATION ERROR")
+                }
             }
             _ => {
                 match self.rotation{
@@ -193,8 +217,28 @@ impl Gamepiece for Piece{
     
 }
 
+impl Copy for PieceType {}
 
+impl Clone for PieceType{
+    fn clone(&self) -> PieceType {
+        match self{
+            PieceType::IPiece => PieceType::IPiece,
+            PieceType::JPiece => PieceType::JPiece,
+            PieceType::LPiece => PieceType::LPiece,
+            PieceType::SPiece => PieceType::SPiece,
+            PieceType::ZPiece => PieceType::ZPiece,
+            PieceType::OPiece => PieceType::OPiece,
+            PieceType::TPiece => PieceType::TPiece
+
+        }
+    }
+}
 pub enum RotationDirection{
     Clockwise,
     Counterclockwise
+}
+
+pub struct Held{
+    pub held_type: Option<PieceType>,
+    pub available: bool
 }

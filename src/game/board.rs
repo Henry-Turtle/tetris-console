@@ -2,19 +2,20 @@ use rand::Rng;
 use core::clone::Clone;
 use core::cmp::PartialEq;
 use core::fmt;
-use super::piece::{Piece, PieceType, Gamepiece};
+use super::piece::{Piece, PieceType, Gamepiece, Held};
 
 
 
 
 pub struct Board{
     pub field: Vec<Vec<Tile>>,
-    pub piece: Piece
+    pub piece: Piece,
+    pub held: Held
 }
 impl Board{
 
     pub fn new() -> Board{
-        Board { field: vec![vec![Tile::Empty; 10]; 20], piece: Piece { rotation: 0, piece_type: PieceType::OPiece }}
+        Board { field: vec![vec![Tile::Empty; 10]; 20], piece: Piece { rotation: 0, piece_type: PieceType::OPiece }, held: Held{held_type: None, available: true}}
     }
 
     pub fn get_value(&self, point: Point)->Tile{
@@ -182,7 +183,8 @@ impl Board{
             }
         }
         self.check_for_line_clears();
-        self.generate_new_piece()
+        self.generate_new_piece();
+        self.held.available = true;
     }
     
 
@@ -257,6 +259,29 @@ impl Board{
             6 => PieceType::ZPiece,
             _ => panic!("Invalid pieceRNG")
         };
+        self.piece = Piece{piece_type: newtype, rotation: 0};
+        for point in self.piece.spawn_coordinates(){
+            match self.get_value(point){
+                Tile::Alive | Tile::Dead => return,
+                Tile::Empty => ()
+            }
+        }
+        for point in self.piece.spawn_coordinates(){
+            self.set_value(point, Tile::Alive);
+        }
+    }
+
+    pub fn generate_specific_piece(&mut self, piecetype: Option<PieceType>){
+        let newtype: PieceType;
+        match piecetype{
+            Some(T) => {
+                newtype = T;
+            },
+            None => {
+                self.generate_new_piece();
+                return;
+            }
+        }
         self.piece = Piece{piece_type: newtype, rotation: 0};
         for point in self.piece.spawn_coordinates(){
             match self.get_value(point){
