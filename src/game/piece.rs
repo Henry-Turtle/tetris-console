@@ -4,7 +4,7 @@ pub struct Piece{
     pub rotation: usize,
     pub piece_type: PieceType
 }
-
+#[derive(Debug)]
 pub enum PieceType{
     OPiece,
     TPiece,
@@ -61,7 +61,6 @@ pub fn rotation_is_valid(board: &mut Board, rotation: &[(i8, i8); 4], wallkick: 
         board.set_value_by_coords(alive_tiles[tile].row + rotation[tile].0 + wallkick.0, alive_tiles[tile].col + rotation[tile].1 + wallkick.1, Tile::Alive);
         
     }
-    println!("");
     return true;
 }
 
@@ -90,6 +89,11 @@ impl Gamepiece for Piece{
         let wallkicks = self.get_wallkicks(RotationDirection::Clockwise);
         for kick in wallkicks{
             if rotation_is_valid(board, rotation, kick){
+                match board.piece.rotation{
+                    0 | 1 | 2 => board.piece.rotation += 1,
+                    3 => board.piece.rotation = 0,
+                    _ => panic!("R")
+                }
                 return PieceResult::Success
             }
         }
@@ -101,6 +105,11 @@ impl Gamepiece for Piece{
         let wallkicks = self.get_wallkicks(RotationDirection::Clockwise);
         for kick in wallkicks{
             if rotation_is_valid(board, rotation, kick){
+                match board.piece.rotation{
+                    1 | 2 | 3 => board.piece.rotation -= 1,
+                    0 => board.piece.rotation = 3,
+                    _ => panic!("Rotation OOB")
+                }
                 return PieceResult::Success
             }
         }

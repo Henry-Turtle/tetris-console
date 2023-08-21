@@ -2,7 +2,7 @@ use rand::Rng;
 use core::clone::Clone;
 use core::cmp::PartialEq;
 use core::fmt;
-use super::piece::{Piece, PieceType, Gamepiece, Held};
+use super::{piece::{Piece, PieceType, Gamepiece, Held}, game::Actions};
 
 
 
@@ -59,7 +59,7 @@ impl Board{
         }
     }
 
-    pub fn rightshift_all(&mut self){
+    pub fn rightshift_all(&mut self, actions: &mut Actions){
         let alive_tiles = self.get_alive_tiles();
 
         for tile in &alive_tiles{
@@ -82,9 +82,10 @@ impl Board{
         for tile in &alive_tiles{
             self.set_value_by_coords(tile.row, tile.col+1, Tile::Alive);
         }
+        self.recalculate_stall(actions);
     }
 
-    pub fn leftshift_all(&mut self){
+    pub fn leftshift_all(&mut self, actions: &mut Actions){
         let alive_tiles = self.get_alive_tiles();
         for tile in &alive_tiles{
             match tile.col{
@@ -106,6 +107,8 @@ impl Board{
         for tile in &alive_tiles{
             self.set_value_by_coords(tile.row, tile.col-1, Tile::Alive);
         }
+        self.recalculate_stall(actions);
+
     }
     pub fn upshift_all(&mut self){
         let alive_tiles = self.get_alive_tiles();
@@ -133,7 +136,7 @@ impl Board{
 
     }
 
-    pub fn downshift_all(&mut self){
+    pub fn downshift_all(&mut self, actions: &mut Actions){
         let alive_tiles = self.get_alive_tiles();
         
 
@@ -141,18 +144,22 @@ impl Board{
             match tile.row{
                 19 => 
                 {
-                    self.lock_piece();
-                    return;
+                    if actions.piece_can_lock{
+                        self.lock_piece(actions);
+                    }
+                    return
+                    
                 },
-                0..=18 => (),
-                _ => panic!("downshift OOB")
+                _ => ()
             }
 
             match self.get_value_by_coords(tile.row+1, tile.col){
-                Tile::Dead => 
-                {
-                    self.lock_piece();
+                Tile::Dead => {
+                    if actions.piece_can_lock{
+                        self.lock_piece(actions);
+                    }
                     return;
+                    
                 },
                 _ => ()
             }
@@ -166,14 +173,14 @@ impl Board{
             self.set_value_by_coords(tile.row+1, tile.col, Tile::Alive);
         }
 
-
-
+        actions.piece_can_lock = false;
+        actions.piece_can_lock_timer = 30;
 
 
     }
 
 
-    fn lock_piece(&mut self){
+    fn lock_piece(&mut self, actions: &mut Actions){
         for row in 0..20{
             for col in 0..10{
                 match self.field[row][col]{
@@ -185,11 +192,14 @@ impl Board{
         self.check_for_line_clears();
         self.generate_new_piece();
         self.held.available = true;
+        actions.stall_lock_count = actions.stall_lock_max;
+        actions.piece_can_lock = false;
+        
     }
     
 
     //*A modified version of the downshift_all function */
-    pub fn hard_drop(&mut self){
+    pub fn hard_drop(&mut self, actions: &mut Actions){
         loop {
             let alive_tiles = self.get_alive_tiles();
         
@@ -198,7 +208,7 @@ impl Board{
             match tile.row{
                 19 => 
                 {
-                    self.lock_piece();
+                    self.lock_piece(actions);
                     return;
                 },
                 0..=18 => (),
@@ -208,7 +218,7 @@ impl Board{
             match self.get_value_by_coords(tile.row+1, tile.col){
                 Tile::Dead => 
                 {
-                    self.lock_piece();
+                    self.lock_piece(actions);
                     return;
                 },
                 _ => ()
@@ -248,6 +258,11 @@ impl Board{
             }
         }
     }
+    pub fn recalculate_stall(&mut self, actions: &mut Actions){
+        actions.piece_can_lock_timer = 30;
+        actions.piece_can_lock = false;
+        actions.stall_lock_count += 1;
+    }
     pub fn generate_new_piece(&mut self){
         let newtype = match rand::thread_rng().gen_range(0..7){
             0 => PieceType::IPiece,
@@ -259,6 +274,7 @@ impl Board{
             6 => PieceType::ZPiece,
             _ => panic!("Invalid pieceRNG")
         };
+        println!("SPAWN {:?}", newtype);
         self.piece = Piece{piece_type: newtype, rotation: 0};
         for point in self.piece.spawn_coordinates(){
             match self.get_value(point){
