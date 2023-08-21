@@ -6,6 +6,8 @@ extern crate piston;
 mod game;
 
 
+use std::env;
+
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::{EventLoop, ButtonState};
@@ -18,6 +20,7 @@ use game::game::Game;
 
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;
 
@@ -31,10 +34,12 @@ fn main() {
 
     let mut game = Game::new(GlGraphics::new(opengl));
     // Create a new game and run it.
-    let mut events = Events::new(EventSettings::new()).ups(*&game.level as u64);
+    let mut events = Events::new(EventSettings::new()).ups(60);
     while let Some(e) = events.next(&mut window) {
+        
         if let Some(args) = e.render_args() {
             game.render(&args);
+            
         }
 
         if let Some(args) = e.update_args() {
@@ -44,7 +49,9 @@ fn main() {
         if let Some(press) = e.button_args(){
             if press.state == ButtonState::Press{
                 game.on_pressed(&press.button);
-                //game.draw_board();
+            }
+            if press.state == ButtonState::Release{
+                game.on_released(&press.button);
             }
         }
     }
