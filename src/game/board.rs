@@ -2,6 +2,7 @@ use rand::Rng;
 use core::clone::Clone;
 use core::cmp::PartialEq;
 use core::fmt;
+use std::ops::Add;
 use super::{piece::{Piece, PieceType, Gamepiece, Held}, game::Actions};
 
 
@@ -134,7 +135,7 @@ impl Board{
 
     }
 
-    pub fn downshift_all(&mut self, actions: &mut Actions){
+    pub fn downshift_all(&mut self, actions: &mut Actions, score: &mut u128){
         let alive_tiles = self.get_alive_tiles();
         
 
@@ -143,7 +144,7 @@ impl Board{
                 19 => 
                 {
                     if actions.piece_can_lock{
-                        self.lock_piece(actions);
+                        self.lock_piece(actions, score);
                     }
                     return
                     
@@ -154,7 +155,7 @@ impl Board{
             match self.get_value_by_coords(tile.row+1, tile.col).status{
                 TileStatus::Dead => {
                     if actions.piece_can_lock{
-                        self.lock_piece(actions);
+                        self.lock_piece(actions, score);
                     }
                     return;
                     
@@ -178,7 +179,7 @@ impl Board{
     }
 
 
-    fn lock_piece(&mut self, actions: &mut Actions){
+    fn lock_piece(&mut self, actions: &mut Actions, score: &mut u128){
         for row in 0..20{
             for col in 0..10{
                 match self.field[row][col].status{
@@ -187,7 +188,7 @@ impl Board{
                 }
             }
         }
-        self.check_for_line_clears();
+        self.check_for_line_clears(actions, score);
         self.generate_new_piece();
         self.held.available = true;
         actions.stall_lock_count = actions.stall_lock_max;
@@ -197,7 +198,7 @@ impl Board{
     
 
     //*A modified version of the downshift_all function */
-    pub fn hard_drop(&mut self, actions: &mut Actions){
+    pub fn hard_drop(&mut self, actions: &mut Actions, score: &mut u128){
         loop {
             let alive_tiles = self.get_alive_tiles();
         
@@ -206,7 +207,7 @@ impl Board{
             match tile.row{
                 19 => 
                 {
-                    self.lock_piece(actions);
+                    self.lock_piece(actions, score);
                     return;
                 },
                 0..=18 => (),
@@ -216,7 +217,7 @@ impl Board{
             match self.get_value_by_coords(tile.row+1, tile.col).status{
                 TileStatus::Dead => 
                 {
-                    self.lock_piece(actions);
+                    self.lock_piece(actions, score);
                     return;
                 },
                 _ => ()
@@ -233,7 +234,7 @@ impl Board{
         }
     }
 
-    fn check_for_line_clears(&mut self){
+    fn check_for_line_clears(&mut self, actions: &mut Actions, score: &mut u128){
         let mut lines_cleared: Vec<usize> = vec![];
         'row: for row in (0..20).rev(){
             for col in 0..10{
@@ -246,7 +247,18 @@ impl Board{
             self.field[row] = vec![Tile{status: TileStatus::Empty, piece_type: None}; 10];
             lines_cleared.insert(0, row);
         }
+        let mut score_added:u128 = match lines_cleared.len(){
+            4 => 800,
+            3 => 500,
+            2 => 300,
+            1 => 100, 
+            _ => 0
+        };
+        score_added = score_added * (31-actions.gravity_delay) as u128;
+        *score = *score + score_added;
 
+        self.update_score(actions, score);
+        println!("{}", score);
         for line in lines_cleared{  
             for row in (0..line).rev(){
                 for col in 0..10{
@@ -306,6 +318,18 @@ impl Board{
         for point in self.piece.spawn_coordinates(){
             self.set_value(point, TileStatus::Alive);
         }
+    }
+
+    fn update_score(&mut self, actions: &mut Actions, score: &mut u128){
+        let score_copy = score.clone();
+        let level = (score_copy as f64 / 1000.0) as i8;
+        if 30-level > 0{
+            actions.gravity_delay = 30 - level as u8
+        }
+        else{
+            actions.gravity_delay = 1
+        }
+        
     }
     
 }

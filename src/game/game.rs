@@ -12,8 +12,8 @@ use rand::Rng;
 pub struct Game {
     pub gl: GlGraphics, // OpenGL drawing backend.
     grid: board::Board,
-    pub level: u8,
     actions: Actions,
+    pub score: u128
 }
 
 impl Game {
@@ -25,8 +25,8 @@ impl Game {
         let mut g = Game {
             gl: gl,
             grid: board::Board::new(),
-            level: 1,
             actions: Actions::new(),
+            score: 0
         };
         g.grid.generate_new_piece();
 
@@ -132,7 +132,7 @@ impl Game {
             true => {
                 if self.actions.down_held_timer <= 0 {
                     self.actions.piece_can_lock = true;
-                    self.grid.downshift_all(&mut self.actions);
+                    self.grid.downshift_all(&mut self.actions, &mut self.score);
                     self.actions.down_held_timer = self.actions.down_held_delay;
                 } else {
                     self.actions.down_held_timer -= 1;
@@ -142,7 +142,7 @@ impl Game {
                 //*Downshift to gravity */
                 self.actions.gravity_timer -= 1;
                 if self.actions.gravity_timer == 0 {
-                    self.grid.downshift_all(&mut self.actions);
+                    self.grid.downshift_all(&mut self.actions, &mut self.score);
                     self.actions.gravity_timer = self.actions.gravity_delay;
                 }
             }
@@ -183,10 +183,10 @@ impl Game {
             }
             Button::Keyboard(Key::Up) => self.grid.upshift_all(),
             Button::Keyboard(Key::Down) => {
-                self.grid.downshift_all(&mut self.actions);
+                self.grid.downshift_all(&mut self.actions, &mut self.score);
                 self.actions.down_held = true;
             }
-            Button::Keyboard(Key::Space) => self.grid.hard_drop(&mut self.actions),
+            Button::Keyboard(Key::Space) => self.grid.hard_drop(&mut self.actions, &mut self.score),
             Button::Keyboard(Key::X) => self.rotate_clockwise(),
 
             Button::Keyboard(Key::Z) => self.rotate_counterclockwise(),
@@ -287,7 +287,7 @@ pub struct Actions {
     ///How many frames it will take for piece to downshift due to down held
     down_held_delay: u8,
     ///How many frames it will take for piece to downshift due to gravity
-    gravity_delay: u8,
+    pub gravity_delay: u8,
     ///How many frames until the piece downshifts to gravity
     gravity_timer: u8,
 
