@@ -2,8 +2,9 @@
 use super::piece::{Gamepiece, Held, Piece, PieceResult, PieceType};
 use crate::game::board;
 use crate::game::board::Point;
-use crate::game::board::Tile;
+use crate::game::board::TileStatus;
 use crate::game::piece;
+use graphics::types::Color;
 use opengl_graphics::GlGraphics;
 use piston::{Button, Key, RenderArgs, UpdateArgs};
 use rand::Rng;
@@ -40,6 +41,15 @@ impl Game {
         const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
         const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
+        const I: [f32; 4] = [0.0, 0.8, 0.8, 1.0];
+        const S: [f32; 4] = [0.0, 0.9, 0.0, 1.0];
+        const O: [f32; 4] = [0.8, 0.8, 0.0, 1.0];
+        const Z: [f32; 4] = [0.8, 0.0, 0.0, 1.0];
+        const L: [f32; 4] = [0.8, 0.4, 0.0, 1.0];
+        const J: [f32; 4] = [0.0, 0.0, 0.8, 1.0];
+        const T: [f32; 4] = [0.6, 0.0, 0.8, 1.0];
+    
+
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen.
             graphics::clear(BLACK, gl);
@@ -47,8 +57,8 @@ impl Game {
 
             for row in (0..20).rev() {
                 graphics::line(
-                    RED,
-                    1.0,
+                    WHITE,
+                    0.5,
                     [
                         0.0,
                         args.window_size[0] / 10.0 * row as f64,
@@ -60,8 +70,8 @@ impl Game {
                 );
                 for col in (0..10) {
                     graphics::line(
-                        RED,
-                        1.0,
+                        WHITE,
+                        0.5,
                         [
                             args.window_size[1] / 20.0 * col as f64,
                             0.0,
@@ -71,9 +81,21 @@ impl Game {
                         c.transform.trans(0.0, 0.0),
                         gl,
                     );
-                    match self.grid.get_value(Point { row: row, col: col }) {
-                        Tile::Alive => graphics::rectangle(
-                            GREEN,
+                    match self.grid.get_value(Point { row: row, col: col }).status {
+                        TileStatus::Alive | TileStatus::Dead => {
+                            let color: [f32; 4] = match self.grid.get_value(Point{row: row, col: col}).piece_type{
+                                Some(PieceType::OPiece) => O,
+                                Some(PieceType::IPiece) => I,
+                                Some(PieceType::JPiece) => J,
+                                Some(PieceType::LPiece) => L,
+                                Some(PieceType::SPiece) => S,
+                                Some(PieceType::ZPiece) => Z,
+                                Some(PieceType::TPiece) => T,
+                                None => WHITE
+
+                            };
+                            graphics::rectangle(
+                            color,
                             rectangle::square(
                                 args.window_size[0] / 10.0 * col as f64,
                                 args.window_size[1] / 20.0 * row as f64,
@@ -81,18 +103,8 @@ impl Game {
                             ),
                             c.transform.trans(0.0, 0.0),
                             gl,
-                        ),
-                        Tile::Dead => graphics::rectangle(
-                            WHITE,
-                            rectangle::square(
-                                args.window_size[0] / 10.0 * col as f64,
-                                args.window_size[1] / 20.0 * row as f64,
-                                args.window_size[0] / 10.0,
-                            ),
-                            c.transform.trans(0.0, 0.0),
-                            gl,
-                        ),
-                        Tile::Empty => graphics::rectangle(
+                        )},
+                        TileStatus::Empty => graphics::rectangle(
                             BLACK,
                             rectangle::square(
                                 args.window_size[0] / 10.0 * col as f64,
@@ -241,7 +253,7 @@ impl Game {
             return;
         }
         match self.grid.held.held_type {
-            Some(PieceType) => {
+            Some(piece_type) => {
                 let current_held = self.grid.held.held_type.clone();
                 self.grid.held = Held {
                     held_type: Some(self.grid.piece.piece_type.clone()),
@@ -304,7 +316,7 @@ impl Actions {
             down_held: false,
             down_held_delay: 3,
             down_held_timer: 3,
-            gravity_delay: 5,
+            gravity_delay: 30,
             gravity_timer: 5,
             das_delay: 10,
             frames_until_das_activates: 10,

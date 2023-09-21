@@ -1,4 +1,4 @@
-use super::board::{Point, Tile, Board};
+use super::board::{Point, TileStatus, Board};
 pub struct Piece{
     //*Number of clockwise rotations. 0 is base, goes to 3 */
     pub rotation: usize,
@@ -50,15 +50,15 @@ pub fn rotation_is_valid(board: &mut Board, rotation: &[(i8, i8); 4], wallkick: 
         if alive_tiles[tile].row + rotation[tile].0 + wallkick.0 >= 20 || alive_tiles[tile].row + rotation[tile].0 + wallkick.0 < 0 || alive_tiles[tile].col + rotation[tile].1 + wallkick.1 >= 10 || alive_tiles[tile].col + rotation[tile].1 + wallkick.1 < 0 {
             return false
         }
-        match board.get_value_by_coords(alive_tiles[tile].row + rotation[tile].0 + wallkick.0, alive_tiles[tile].col + rotation[tile].1 + wallkick.1){
-            Tile::Dead => return false,
+        match board.get_value_by_coords(alive_tiles[tile].row + rotation[tile].0 + wallkick.0, alive_tiles[tile].col + rotation[tile].1 + wallkick.1).status{
+            TileStatus::Dead => return false,
             _ => ()
         }
     }
 
     board.remove_all_alive_tiles();
     for tile in 0..4{
-        board.set_value_by_coords(alive_tiles[tile].row + rotation[tile].0 + wallkick.0, alive_tiles[tile].col + rotation[tile].1 + wallkick.1, Tile::Alive);
+        board.set_value_by_coords(alive_tiles[tile].row + rotation[tile].0 + wallkick.0, alive_tiles[tile].col + rotation[tile].1 + wallkick.1, TileStatus::Alive);
         
     }
     return true;
